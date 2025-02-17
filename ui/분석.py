@@ -24,6 +24,9 @@ def run_eml():
     # 검색일자 년도와 월만 나오게 하기
     df['검색일자']=df['검색일자'].astype(str).str[:6].apply(lambda x: x[:4] + '-' + x[4:])
 
+    # 검색어명 여행만 나오게 하기
+    df['검색어명'] = df['검색어명'].str[:-2]
+
 # -------------------------------------------------------------------------------------------------------
     st.subheader('연도별 해외여행 관심도')
 
@@ -58,6 +61,8 @@ def run_eml():
     result=df.groupby('검색어명')['총 검색량'].sum().reset_index()
     result=result.sort_values('총 검색량',ascending=False).head(10).reset_index(drop='index')
 
+    print(df)
+
     fig, ax=plt.subplots(figsize=(12, 6))
     plt.plot(result['검색어명'], result['총 검색량'], marker='o')
     plt.xlabel('검색어')
@@ -73,7 +78,27 @@ def run_eml():
 
 # -------------------------------------------------------------------------------------------------------
     st.subheader('Top10 해외여행지에 대한 포털 검색 트렌드 분석')
-    st.text('모바일과 pc검색량의 차이를 보고 사람들이 검색을 주로 어디서하는지 알수 있다.')
+
+    result=df.groupby('검색어명')[['모바일 검색량','PC 검색량','총 검색량']].sum().reset_index()
+    result=result.sort_values(['총 검색량'],ascending=False).head(10).reset_index(drop='index')
+
+    fig,ax=plt.subplots(figsize=(12, 6))
+    plt.plot(result['검색어명'],result['모바일 검색량'],label='모바일',marker='o')
+    plt.plot(result['검색어명'],result['PC 검색량'],label='PC',marker='o')
+    plt.title('Top10 해외여행지에 대한 포털 검색 트렌드 분석',fontsize=16)
+    plt.xlabel('검색어')
+    plt.ylabel('검색량')
+    plt.legend()
+    plt.show()
+
+    st.pyplot(fig)
+
+    st.write(f"""
+    검색 트렌드 분석:
+    - 대부분의 기간 동안 모바일 검색량이 PC 검색량을 상회하고 있습니다.
+    - 이는 사용자들이 여행 정보를 주로 모바일 기기를 통해 검색한다는 것을 시사합니다.
+    - 여행사들은 모바일 친화적인 마케팅 전략을 수립해야 할 것으로 보입니다.
+    """)
 
 # -------------------------------------------------------------------------------------------------------
     st.subheader('다음 키워드 예측')

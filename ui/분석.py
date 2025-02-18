@@ -4,6 +4,9 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sb
+from prophet import Prophet
+
+
 
 
 if platform.system() == 'Windows':
@@ -22,7 +25,7 @@ def run_eml():
     df=df.rename(columns={'SEQ_NO':'일렬번호','ALL_KWRD_RANK_CO':'키워드 순위','SRCHWRD_NM':'검색어명','UPPER_CTGRY_NM':'카테고리(상)','LWPRT_CTGRY_NM':'카테고리(하)','CNTT_NM':'대륙','COUNTRY_NM':'국가','MOBILE_SCCNT_VALUE':'모바일 검색량','PC_SCCNT_VALUE':'PC 검색량','SCCNT_SM_VALUE':'총 검색량','SCCNT_DE':'검색일자'})
 
     # 검색일자 년도와 월만 나오게 하기
-    df['검색일자']=df['검색일자'].astype(str).str[:6].apply(lambda x: x[:4] + '-' + x[4:])
+    df['검색일자']=pd.to_datetime(df['검색일자'], format='%Y%m%d').dt.strftime('%Y-%m-%d')
 
     # 검색어명 여행만 나오게 하기
     df['검색어명'] = df['검색어명'].str[:-2]
@@ -52,6 +55,37 @@ def run_eml():
     그래프 분석:
     - 2020년부터 2022년까지 검색량이 급격히 감소했습니다. 이는 COVID-19 팬데믹의 영향으로 보입니다.
     - 2023년부터 검색량이 크게 증가하고 있어, 해외여행에 대한 관심이 회복되고 있음을 알 수 있습니다.
+    """)
+
+# -------------------------------------------------------------------------------------------------------
+
+    df_new=df.groupby(['검색일자'])[['총 검색량']].sum().reset_index()
+    st.dataframe(df_new)
+
+    model=Prophet()
+    df_new.columns=['ds','y']
+    st.dataframe(df_new)
+    os.environ['R_STAN_BACKEND'] = 'CMDSTANR'
+    model.fit(df_new)
+    future = model.make_future_dataframe(periods=100)
+    forecaster=model.predict(future)
+
+    fig = model.plot(forecaster)
+    plt.title('Sales Forecast')
+    plt.xlabel('Data')
+    plt.ylabel('Sales')
+    plt.show()
+    st.pyplot(fig) 
+
+    fig2=model.plot_components(forecaster)
+    plt.show()
+    st.pyplot(fig2)
+
+    st.text("""
+    그래프 분석:
+    - 총검색량을 가지고 분석한 자료입니다. 
+    - 다음년도에는 여행 관심도가 약간 내려가는 걸로 보입니다.
+    - 
     """)
 
 

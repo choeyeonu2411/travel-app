@@ -5,6 +5,7 @@ from ui.개발과정 import run_dp
 from ui.분석 import run_eml
 
 def main() :
+    st.set_page_config(layout="centered")
     st.title('해외여행 트랜드 분석과 예측')
 
     st.sidebar.title('메뉴')

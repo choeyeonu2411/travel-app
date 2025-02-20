@@ -31,7 +31,7 @@ def run_eml():
     df['검색어명'] = df['검색어명'].str[:-2]
 
 # -------------------------------------------------------------------------------------------------------
-    st.subheader('연도별 해외여행 관심도')
+    st.subheader('연도별 해외관심도 추세')
 
     # '검색일자'에서 연도만 추출
     df['연도'] = df['검색일자'].astype(str).str[:4]
@@ -51,64 +51,47 @@ def run_eml():
 
     # Streamlit에 그래프 표시
     st.pyplot(fig)
-    st.text("""
-    그래프 분석:
+    st.info("""
     - 2020년부터 2022년까지 검색량이 급격히 감소했습니다. 이는 COVID-19 팬데믹의 영향으로 보입니다.
     - 2023년부터 검색량이 크게 증가하고 있어, 해외여행에 대한 관심이 회복되고 있음을 알 수 있습니다.
     """)
 
-# -------------------------------------------------------------------------------------------------------
 
-    df_new=df.groupby(['검색일자'])[['총 검색량']].sum().reset_index()
-    st.dataframe(df_new)
 
-    model=Prophet()
-    df_new.columns=['ds','y']
-    st.dataframe(df_new)
-    os.environ['R_STAN_BACKEND'] = 'CMDSTANR'
-    model.fit(df_new)
-    future = model.make_future_dataframe(periods=100)
-    forecaster=model.predict(future)
 
-    fig = model.plot(forecaster)
-    plt.title('Sales Forecast')
-    plt.xlabel('Data')
-    plt.ylabel('Sales')
-    plt.show()
-    st.pyplot(fig) 
-
-    fig2=model.plot_components(forecaster)
-    plt.show()
-    st.pyplot(fig2)
-
-    st.text("""
-    그래프 분석:
-    - 총검색량을 가지고 분석한 자료입니다. 
-    - 다음년도에는 여행 관심도가 약간 내려가는 걸로 보입니다.
-    - 
-    """)
-
+# 상관계수...
 
 # -------------------------------------------------------------------------------------------------------
-    st.subheader('해외여행지 TOP10 랭킹 분석')
+    st.subheader('대륙별 해외여행 TOP5 랭킹 분석')
 
-    result=df.groupby('검색어명')['총 검색량'].sum().reset_index()
-    result=result.sort_values('총 검색량',ascending=False).head(10).reset_index(drop='index')
 
-    print(df)
+    world=['아시아', '유럽', '오세아니아', '북아메리카', '남아메리카', '아프리카']
+    index=st.selectbox('대륙',world)
+
+    df_world=df.groupby(['검색어명','대륙'])['총 검색량'].sum().reset_index()
+    df_world=df_world[df_world['대륙']==index].sort_values('총 검색량',ascending=False).head(5)
 
     fig, ax=plt.subplots(figsize=(12, 6))
-    plt.plot(result['검색어명'], result['총 검색량'], marker='o')
+    plt.plot(df_world['검색어명'], df_world['총 검색량'], marker='o')
     plt.xlabel('검색어')
     plt.ylabel('검색량')
     plt.show()
     st.pyplot(fig)
 
-    st.text("""
-    분석 결과:
-    - 상위 10개 여행지 중 대부분이 아시아 국가입니다.
-    - 일본과 베트남이 특히 높은 검색량을 보이고 있어, 한국인들에게 인기 있는 여행지임을 알 수 있습니다.
-    """)
+    if index==world[0] :
+        st.info('아시아')
+    elif index==world[1] :
+        st.info('유럽')
+    elif index==world[2] :
+        st.info('오세아니아')
+    elif index==world[3] :
+        st.info('북아메리카')
+    elif index==world[4] :
+        st.info('남아메리카')
+    elif index==world[5] :
+        st.info('아프리카')
+
+  
 
 # -------------------------------------------------------------------------------------------------------
     st.subheader('Top10 해외여행지에 대한 포털 검색 트렌드 분석')
@@ -127,11 +110,55 @@ def run_eml():
 
     st.pyplot(fig)
 
-    st.write(f"""
+    st.info(f"""
     검색 트렌드 분석:
     - 대부분의 기간 동안 모바일 검색량이 PC 검색량을 상회하고 있습니다.
     - 이는 사용자들이 여행 정보를 주로 모바일 기기를 통해 검색한다는 것을 시사합니다.
     - 여행사들은 모바일 친화적인 마케팅 전략을 수립해야 할 것으로 보입니다.
+    """)
+
+# -------------------------------------------------------------------------------------------------------
+
+    st.subheader('해외 관심도 예측')
+
+    df_new=df.groupby(['검색일자'])[['총 검색량']].sum().reset_index()
+ 
+    model=Prophet()
+    df_new.columns=['ds','y']
+    os.environ['R_STAN_BACKEND'] = 'CMDSTANR'
+    model.fit(df_new)
+    future = model.make_future_dataframe(periods=100)
+    forecaster=model.predict(future)
+
+    fig = model.plot(forecaster)
+    plt.title('Sales Forecast')
+    plt.xlabel('Data')
+    plt.ylabel('Sales')
+    plt.show()
+    st.pyplot(fig) 
+    st.info("""
+    전체 판매량 예측:
+     - 전반적으로 2023-2024년에 판매량이 크게 증가하는 추세가 나타나며, 이후 2025년에는 약간 감소하는 것으로 예측됩니다
+    
+     - 검은 점: 실제 총 검색량 데이터입니다. / 파란색 선: Prophet 모델이 예측한 총 검색량입니다.
+     - 연한 파란색 음영 영역: 예측의 불확실성을 나타냅니다. 실제 판매량이 이 범위 안에 들어갈 가능성이 높다는 것을 의미합니다. 영역이 넓을수록    예측의 불확실성이 큽니다.
+    """)
+
+    fig2=model.plot_components(forecaster)
+    plt.show()
+    st.pyplot(fig2)
+
+    st.info("""
+    **트렌드 (Trend):**
+    전체적인 판매량의 장기적인 증가 또는 감소 추세를 보여줍니다.
+
+    **주간 계절성 (Weekly):**
+    일요일에 판매량이 가장 높고 토요일에 판매량이 가장 낮습니다. 
+    주말인 일요일에 판매량이 높고, 주중으로 갈수록 점차 낮아지는 경향을 보입니다.
+
+    **연간 계절성 (Yearly):**
+    1월과 5월-7월 사이에 판매량이 가장 높고, 10월-12월 사이에 판매량이 가장 낮습니다. 
+    연초와 늦은 봄/초여름에 판매량이 높고, 늦가을/초겨울에 판매량이 낮아지는 계절적 패턴을 보입니다.
     """)
 
 # -------------------------------------------------------------------------------------------------------
